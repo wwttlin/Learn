@@ -1,0 +1,46 @@
+# 前端 Dockerfile
+FROM node:18-alpine as builder
+
+# 設定工作目錄
+WORKDIR /app
+
+# 複製前端 package.json
+COPY client/package*.json ./
+
+# 安裝依賴
+RUN npm ci
+
+# 複製前端程式碼
+COPY client/ ./
+
+# 建置前端
+RUN npm run build
+
+# 生產階段
+FROM node:18-alpine
+
+# 安裝 serve
+RUN npm install -g serve
+
+# 建立非 root 用戶
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# 設定工作目錄
+WORKDIR /app
+
+# 從建置階段複製建置結果
+COPY --from=builder --chown=nodejs:nodejs /app/build ./build
+
+# 切換到非 root 用戶
+USER nodejs
+
+# 暴露端口
+EXPOSE 3000
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+# 啟動命令
+CMD ["serve", "-s", "build", "-l", "3000"]
