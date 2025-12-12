@@ -12,6 +12,8 @@
     "start": "node server/index.js",
     "start:prod": "NODE_ENV=production node server/index.js",
     "deploy": "npm run install-all && npm run build",
+    "init-db": "node init-database.js",
+    "deploy-ubuntu": "./deploy-ubuntu.sh",
     "pm2:start": "pm2 start ecosystem.config.js --env production",
     "pm2:stop": "pm2 stop all",
     "pm2:restart": "pm2 restart all",
