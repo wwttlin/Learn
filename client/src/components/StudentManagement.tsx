@@ -39,7 +39,7 @@ const StudentManagement: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/students');
+      const response = await fetch('/api/students');
       const data = await response.json();
       setStudents(data);
     } catch (error) {
@@ -51,8 +51,8 @@ const StudentManagement: React.FC = () => {
     e.preventDefault();
     try {
       const url = editingStudent 
-        ? `http://localhost:5000/api/students/${editingStudent.id}`
-        : 'http://localhost:5000/api/students';
+        ? `/api/students/${editingStudent.id}`
+        : '/api/students';
       const method = editingStudent ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -63,14 +63,19 @@ const StudentManagement: React.FC = () => {
         body: JSON.stringify(formData),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         resetForm();
         fetchStudents();
         alert(editingStudent ? '學生資料更新成功！' : '學生新增成功！');
+      } else {
+        console.error('操作失敗:', data);
+        alert(`操作失敗：${data.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error('操作失敗:', error);
-      alert('操作失敗！');
+      alert('操作失敗：無法連接到伺服器');
     }
   };
 
@@ -114,7 +119,7 @@ const StudentManagement: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/api/students/${id}`, {
+      const response = await fetch(`/api/students/${id}`, {
         method: 'DELETE',
       });
       
@@ -128,7 +133,7 @@ const StudentManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('刪除學生失敗:', error);
-      alert('刪除學生失敗！');
+      alert('刪除學生失敗：無法連接到伺服器');
     }
   };
 

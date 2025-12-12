@@ -28,7 +28,7 @@ const CourseManagement: React.FC = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/courses');
+      const response = await fetch('/api/courses');
       const data = await response.json();
       setCourses(data);
     } catch (error) {
@@ -40,8 +40,8 @@ const CourseManagement: React.FC = () => {
     e.preventDefault();
     try {
       const url = editingCourse 
-        ? `http://localhost:5000/api/courses/${editingCourse.id}`
-        : 'http://localhost:5000/api/courses';
+        ? `/api/courses/${editingCourse.id}`
+        : '/api/courses';
       const method = editingCourse ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -57,14 +57,19 @@ const CourseManagement: React.FC = () => {
         }),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         resetForm();
         fetchCourses();
         alert(editingCourse ? '課程更新成功！' : '課程新增成功！');
+      } else {
+        console.error('操作失敗:', data);
+        alert(`操作失敗：${data.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error('操作失敗:', error);
-      alert('操作失敗！');
+      alert('操作失敗：無法連接到伺服器');
     }
   };
 
@@ -98,7 +103,7 @@ const CourseManagement: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/api/courses/${id}`, {
+      const response = await fetch(`/api/courses/${id}`, {
         method: 'DELETE',
       });
       
@@ -112,7 +117,7 @@ const CourseManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('刪除課程失敗:', error);
-      alert('刪除課程失敗！');
+      alert('刪除課程失敗：無法連接到伺服器');
     }
   };
 

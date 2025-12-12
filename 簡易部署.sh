@@ -80,6 +80,15 @@ else
     print_status "serve 已安裝"
 fi
 
+# 安裝 Nginx
+if ! command -v nginx &> /dev/null; then
+    print_status "安裝 Nginx..."
+    sudo apt-get install -y nginx
+    print_status "Nginx 安裝完成"
+else
+    print_status "Nginx 已安裝"
+fi
+
 # 建立必要目錄
 print_status "建立目錄結構..."
 mkdir -p logs backups
@@ -198,6 +207,83 @@ pm2 start "serve -s client/build -l 3000" --name "tutoring-frontend"
 print_status "儲存 PM2 配置..."
 pm2 save
 
+# 配置 Nginx
+print_status "配置 Nginx..."
+NGINX_CONF="/etc/nginx/sites-available/tutoring-system"
+NGINX_ENABLED="/etc/nginx/sites-enabled/tutoring-system"
+
+# 建立 Nginx 配置
+sudo tee $NGINX_CONF > /dev/null << 'NGINX_EOF'
+server {
+    listen 80;
+    server_name _;
+    
+    # 日誌設定
+    access_log /var/log/nginx/tutoring-system.access.log;
+    error_log /var/log/nginx/tutoring-system.error.log;
+
+    # Gzip 壓縮
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json;
+
+    # 後端 API
+    location /api {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 超時設定
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # 增加請求大小限制
+        client_max_body_size 10M;
+    }
+
+    # 前端靜態檔案
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 超時設定
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+NGINX_EOF
+
+# 啟用配置
+if [ ! -L "$NGINX_ENABLED" ]; then
+    sudo ln -sf $NGINX_CONF $NGINX_ENABLED
+    print_status "Nginx 配置已啟用"
+fi
+
+# 移除預設配置
+if [ -L "/etc/nginx/sites-enabled/default" ]; then
+    sudo rm /etc/nginx/sites-enabled/default
+    print_status "已移除預設 Nginx 配置"
+fi
+
+# 測試 Nginx 配置
+if sudo nginx -t 2>/dev/null; then
+    print_status "Nginx 配置測試通過"
+    sudo systemctl restart nginx
+    print_status "Nginx 已重啟"
+else
+    print_warning "Nginx 配置測試失敗，請檢查配置"
+fi
+
 # 設定開機自動啟動
 print_status "設定開機自動啟動..."
 pm2 startup systemd -u $USER --hp $HOME 2>/dev/null || {
@@ -294,11 +380,19 @@ echo "🎉 部署完成！"
 echo ""
 echo "📋 訪問資訊:"
 if [ "$EXTERNAL_IP" != "無法獲取" ]; then
-    echo "  前端應用: http://$EXTERNAL_IP:3000"
-    echo "  後端 API: http://$EXTERNAL_IP:5000"
+    echo "  應用網址: http://$EXTERNAL_IP"
+    echo "  (Nginx 會自動轉發前端和 API 請求)"
+    echo ""
+    echo "  直接訪問:"
+    echo "  - 前端: http://$EXTERNAL_IP:3000"
+    echo "  - 後端: http://$EXTERNAL_IP:5000"
 else
-    echo "  前端應用: http://your-vm-ip:3000"
-    echo "  後端 API: http://your-vm-ip:5000"
+    echo "  應用網址: http://your-vm-ip"
+    echo "  (Nginx 會自動轉發前端和 API 請求)"
+    echo ""
+    echo "  直接訪問:"
+    echo "  - 前端: http://your-vm-ip:3000"
+    echo "  - 後端: http://your-vm-ip:5000"
 fi
 echo ""
 echo "🔧 管理命令:"
@@ -311,6 +405,7 @@ echo "📁 重要檔案:"
 echo "  資料庫: $(pwd)/tutoring.db"
 echo "  日誌: $(pwd)/logs/"
 echo "  備份: $(pwd)/backups/"
+echo "  Nginx 日誌: /var/log/nginx/tutoring-system.*.log"
 echo ""
 
 # 最終檢查

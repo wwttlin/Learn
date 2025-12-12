@@ -66,7 +66,7 @@ const PaymentManagement: React.FC = () => {
 
   const fetchPayments = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/payments');
+      const response = await fetch('/api/payments');
       const data = await response.json();
       setPayments(data);
     } catch (error) {
@@ -76,7 +76,7 @@ const PaymentManagement: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/students');
+      const response = await fetch('/api/students');
       const data = await response.json();
       setStudents(data);
     } catch (error) {
@@ -86,7 +86,7 @@ const PaymentManagement: React.FC = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/courses');
+      const response = await fetch('/api/courses');
       const data = await response.json();
       setCourses(data);
     } catch (error) {
@@ -153,7 +153,7 @@ const PaymentManagement: React.FC = () => {
     console.log('發送請求資料:', requestData);
     
     try {
-      const response = await fetch('http://localhost:5000/api/payments', {
+      const response = await fetch('/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ const PaymentManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('新增繳費記錄失敗:', error);
-      alert('新增繳費記錄失敗！請檢查網路連線。');
+      alert('新增繳費記錄失敗：無法連接到伺服器');
     }
   };
 
@@ -200,7 +200,7 @@ const PaymentManagement: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/api/payments/${selectedPayment.id}/pay-remaining`, {
+      const response = await fetch(`/api/payments/${selectedPayment.id}/pay-remaining`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,6 +212,8 @@ const PaymentManagement: React.FC = () => {
         }),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         setPaymentData({
           amount: '',
@@ -222,10 +224,12 @@ const PaymentManagement: React.FC = () => {
         setSelectedPayment(null);
         fetchPayments();
         alert('尾款繳費成功！');
+      } else {
+        alert(`尾款繳費失敗：${data.error || '未知錯誤'}`);
       }
     } catch (error) {
       console.error('尾款繳費失敗:', error);
-      alert('尾款繳費失敗！');
+      alert('尾款繳費失敗：無法連接到伺服器');
     }
   };
 
@@ -259,15 +263,16 @@ const PaymentManagement: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:5000/api/payments/${id}`, {
+      const response = await fetch(`/api/payments/${id}`, {
         method: 'DELETE',
       });
+      
+      const data = await response.json();
       
       if (response.ok) {
         fetchPayments();
         alert('繳費記錄刪除成功！');
       } else {
-        const data = await response.json();
         alert(data.error || '刪除失敗！');
       }
     } catch (error) {
