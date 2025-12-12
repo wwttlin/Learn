@@ -208,12 +208,19 @@ print_status "儲存 PM2 配置..."
 pm2 save
 
 # 配置 Nginx
-print_status "配置 Nginx..."
+print_status "檢查 Nginx 配置..."
 NGINX_CONF="/etc/nginx/sites-available/tutoring-system"
 NGINX_ENABLED="/etc/nginx/sites-enabled/tutoring-system"
 
-# 建立 Nginx 配置
-sudo tee $NGINX_CONF > /dev/null << 'NGINX_EOF'
+# 檢查是否已有配置
+if [ -f "$NGINX_CONF" ]; then
+    print_warning "發現現有 Nginx 配置"
+    print_info "跳過 Nginx 配置，保留現有設定"
+    print_info "如需重新配置，請執行: ./setup-nginx.sh"
+else
+    print_status "建立 Nginx 配置..."
+    # 建立 Nginx 配置
+    sudo tee $NGINX_CONF > /dev/null << 'NGINX_EOF'
 server {
     listen 80;
     server_name _;
@@ -263,25 +270,21 @@ server {
 }
 NGINX_EOF
 
-# 啟用配置
-if [ ! -L "$NGINX_ENABLED" ]; then
-    sudo ln -sf $NGINX_CONF $NGINX_ENABLED
-    print_status "Nginx 配置已啟用"
-fi
+    # 啟用配置
+    if [ ! -L "$NGINX_ENABLED" ]; then
+        sudo ln -sf $NGINX_CONF $NGINX_ENABLED
+        print_status "Nginx 配置已啟用"
+    fi
 
-# 移除預設配置
-if [ -L "/etc/nginx/sites-enabled/default" ]; then
-    sudo rm /etc/nginx/sites-enabled/default
-    print_status "已移除預設 Nginx 配置"
-fi
-
-# 測試 Nginx 配置
-if sudo nginx -t 2>/dev/null; then
-    print_status "Nginx 配置測試通過"
-    sudo systemctl restart nginx
-    print_status "Nginx 已重啟"
-else
-    print_warning "Nginx 配置測試失敗，請檢查配置"
+    # 測試 Nginx 配置
+    if sudo nginx -t 2>/dev/null; then
+        print_status "Nginx 配置測試通過"
+        sudo systemctl restart nginx
+        print_status "Nginx 已重啟"
+    else
+        print_warning "Nginx 配置測試失敗"
+        print_info "請執行 ./setup-nginx.sh 重新配置"
+    fi
 fi
 
 # 設定開機自動啟動
